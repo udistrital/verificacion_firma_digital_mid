@@ -1,0 +1,43 @@
+swagger: "2.0"
+info:
+  title: Verficar Firma MID - Verficar Firma Digital
+  description: Microservicio MID de Verficar Firma MID que complementa Verficar Firma Digital
+  version: 1.0.0
+basePath: /v1
+paths:
+  /verificar_firma"":
+    post:
+      tags:
+      - verificar_firma
+      description: Verifica si un PDF base64 está limpio usando ClamAV
+      operationId: VerificarFirmaController.PostVerificarFirma
+      parameters:
+      - in: body
+        name: body
+        description: Base64 del PDF y hash
+        required: true
+        schema:
+          $ref: '#/definitions/models.EmailAttachment'
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "404":
+          description: body is empty
+definitions:
+  map[string]interface{}:
+    title: map[string]interface{}
+    type: object
+  models.EmailAttachment:
+    title: EmailAttachment
+    type: object
+    properties:
+      hash:
+        type: string
+      pdf_base64:
+        type: string
+tags:
+- name: verificar_firma
+  description: |
+    VerificarFirmaController operations for VerficarFirma
