@@ -36,7 +36,7 @@ func VerificarPDFBase64(pdfBase64 string) requestresponse.APIResponse {
 		"https://pruebasarchivo.portaloas.udistrital.edu.co/v1/verificar",
 		"POST", &rawResponse, payload,
 	)*/
-	urlEscanear := beego.AppConfig.String("EscanearArchivo") + "verificar"
+	urlEscanear := "https://" + beego.AppConfig.String("EscanearArchivo") + "verificar"
 	err := request.SendJson(
 		urlEscanear,
 		"POST", &rawResponse, payload,
