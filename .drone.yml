@@ -9,7 +9,8 @@ steps:
 - name: build
   image: golang:1.25.5
   commands:
-    - go mod download
+    - go mod init
+    - go get -t
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main
   when:
     branch:
