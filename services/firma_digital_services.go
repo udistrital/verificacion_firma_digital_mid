@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+
 	"github.com/astaxie/beego"
-	"github.com/udistrital/verificacion_firma_digital_mid/models"
 	"github.com/udistrital/utils_oas/requestresponse"
+	"github.com/udistrital/verificacion_firma_digital_mid/models"
 )
 
 func PostVerificarFirma(archivo models.EmailAttachment, token string) requestresponse.APIResponse {
