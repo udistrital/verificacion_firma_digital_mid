@@ -2,13 +2,13 @@ package controllers
 
 import (
 	"github.com/astaxie/beego"
+	"log"
 	"encoding/json"
 	"github.com/udistrital/verificacion_firma_digital_mid/services"
 	"github.com/udistrital/verificacion_firma_digital_mid/models"
 	"github.com/udistrital/utils_oas/errorhandler"
 	"github.com/udistrital/utils_oas/requestresponse"
-	"fmt"
-)
+	)
 
 // VerificarFirmaController operations for VerficarFirma
 type VerificarFirmaController struct {
@@ -28,10 +28,13 @@ func (c *VerificarFirmaController) URLMapping() {
 // @Failure 404 body is empty
 // @router "/" [post]
 func (c *VerificarFirmaController) PostVerificarFirma() {
+	log.Println("[trace] verificar_firma.http.enter")
 	defer errorhandler.HandlePanic(&c.Controller)
 
 	var archivos []models.EmailAttachment
+	log.Println("[trace] verificar_firma.http.unmarshal.start")
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &archivos); err != nil {
+		log.Println("[trace] verificar_firma.http.unmarshal.fail")
 		beego.Error(err)
 		c.Ctx.Output.SetStatus(400)
 		c.Data["json"] = requestresponse.APIResponseDTO(false, 400, nil, "Error al decodificar el cuerpo de la solicitud: "+err.Error())
@@ -39,7 +42,9 @@ func (c *VerificarFirmaController) PostVerificarFirma() {
 		return
 	}
 
+	log.Println("[trace] verificar_firma.http.unmarshal.ok")
 	if len(archivos) == 0 {
+		log.Println("[trace] verificar_firma.http.empty_array")
 		c.Ctx.Output.SetStatus(400)
 		c.Data["json"] = requestresponse.APIResponseDTO(false, 400, nil, "El array de archivos está vacío")
 		c.ServeJSON()
@@ -49,7 +54,9 @@ func (c *VerificarFirmaController) PostVerificarFirma() {
 	archivo := archivos[0]
 
 	// Validaciones de campos
+	log.Println("[trace] verificar_firma.http.input.loaded")
 	if archivo.PdfBase64 == "" || archivo.Firma == "" || archivo.UrlFileUp == "" {
+		log.Println("[trace] verificar_firma.http.validation.fail")
 		c.Ctx.Output.SetStatus(400)
 		c.Data["json"] = requestresponse.APIResponseDTO(false, 400, nil, "Los campos pdf_base64, firma y urlFileUp son obligatorios")
 		c.ServeJSON()
@@ -57,15 +64,16 @@ func (c *VerificarFirmaController) PostVerificarFirma() {
 	}
 
 	// Verificar PDF con ClamAV
+	log.Println("[trace] verificar_firma.clamav.start")
 	resultadoClamAV := services.VerificarPDFBase64(archivo.PdfBase64)
+	log.Printf("[trace] verificar_firma.clamav.end | success=%v status=%d\n", resultadoClamAV.Success, resultadoClamAV.Status)
 	if !resultadoClamAV.Success {
 		c.Ctx.Output.SetStatus(resultadoClamAV.Status)
 		c.Data["json"] = resultadoClamAV
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("Resultado de ClamAV:", resultadoClamAV)
-
+	
 	// Obtener resultado del antivirus y formatearlo
 	var virusResult map[string]interface{}
 	if clamAVData, ok := resultadoClamAV.Data.(map[string]interface{}); ok {
@@ -86,11 +94,12 @@ func (c *VerificarFirmaController) PostVerificarFirma() {
 			"statusCode": 500,
 		}
 	}
-	fmt.Println("Resultado de virusResult:", virusResult)
-
+	
+	log.Println("[trace] verificar_firma.signature.start")
 	token := c.Ctx.Input.Header("Authorization")
 	// Verificar firma electrónica
 	respuestaFirma := services.PostVerificarFirma(archivo, token)
+	log.Printf("[trace] verificar_firma.signature.end | success=%v status=%d\n", respuestaFirma.Success, respuestaFirma.Status)
 
 	// Unificar resultados
 	if !respuestaFirma.Success {
@@ -134,6 +143,7 @@ func (c *VerificarFirmaController) PostVerificarFirma() {
 		mensajeFinal,
 	)
 
+	log.Println("[trace] verificar_firma.http.response.200")
 	c.Ctx.Output.SetStatus(200)
 	c.Data["json"] = respuestaFinal
 	c.ServeJSON()
