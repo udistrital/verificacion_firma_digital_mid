@@ -12,7 +12,7 @@ import (
 )
 
 func PostVerificarFirma(archivo models.EmailAttachment, token string) requestresponse.APIResponse {
-	url := beego.AppConfig.String("FirmaElectronicaService") + "verify"
+	url := "http://" + beego.AppConfig.String("FirmaElectronicaService") + "verify"
 
 	payload := []models.PayloadVerificacion{
 		{

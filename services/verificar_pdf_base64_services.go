@@ -2,6 +2,8 @@ package services
 
 import (
 	"encoding/json"
+	"strings"
+
 	"github.com/astaxie/beego"
 	"github.com/udistrital/utils_oas/request"
 	"github.com/udistrital/utils_oas/requestresponse"
@@ -26,18 +28,23 @@ func VerificarPDFBase64(pdfBase64 string) requestresponse.APIResponse {
 	payload := map[string]string{"pdf_base64": pdfBase64}
 	var rawResponse LambdaRawResponse
 
-	urlEscanear := beego.AppConfig.String("EscanearArchivo") + "verificar"
+	urlEscanear := construirUrlEscaneo()
+
 	err := request.SendJson(
 		urlEscanear,
-		"POST", &rawResponse, payload,
+		"POST",
+		&rawResponse,
+		payload,
 	)
 	if err != nil {
 		return requestresponse.APIResponseDTO(false, 500, nil, "Error al llamar a Lambda: "+err.Error())
 	}
+
 	var lambdaResult LambdaResponse
 	if err := json.Unmarshal([]byte(rawResponse.Body), &lambdaResult); err != nil {
 		return requestresponse.APIResponseDTO(false, 500, nil, "Error al decodificar cuerpo de respuesta del antivirus: "+err.Error())
 	}
+
 	if lambdaResult.Status != "clean" && lambdaResult.Status != "infected" {
 		return requestresponse.APIResponseDTO(false, 500, nil, "Respuesta inválida del antivirus")
 	}
@@ -49,4 +56,16 @@ func VerificarPDFBase64(pdfBase64 string) requestresponse.APIResponse {
 			"statusCode": 200,
 		},
 	}, nil)
+}
+
+func construirUrlEscaneo() string {
+	baseURL := strings.TrimSpace(beego.AppConfig.String("EscanearArchivo"))
+
+	if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
+		baseURL = "https://" + baseURL
+	}
+
+	baseURL = strings.TrimRight(baseURL, "/")
+
+	return baseURL + "/verificar"
 }
