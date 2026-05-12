@@ -2,7 +2,8 @@ package services
 
 import (
 	"encoding/json"
-	"fmt"
+	"strings"
+
 	"github.com/astaxie/beego"
 	"github.com/udistrital/utils_oas/request"
 	"github.com/udistrital/utils_oas/requestresponse"
@@ -27,24 +28,18 @@ func VerificarPDFBase64(pdfBase64 string) requestresponse.APIResponse {
 	payload := map[string]string{"pdf_base64": pdfBase64}
 	var rawResponse LambdaRawResponse
 
-	//DOCKER CON CLAMDSCAN
-	/*err := request.SendJson(
-		"http://localhost:8080/v1/verificar",
-		"POST", &rawResponse, payload,
-	)*/
-	/*err := request.SendJson(
-		"https://pruebasarchivo.portaloas.udistrital.edu.co/v1/verificar",
-		"POST", &rawResponse, payload,
-	)*/
-	urlEscanear := "https://" + beego.AppConfig.String("EscanearArchivo") + "verificar"
+	urlEscanear := construirUrlEscaneo()
+
 	err := request.SendJson(
 		urlEscanear,
-		"POST", &rawResponse, payload,
+		"POST",
+		&rawResponse,
+		payload,
 	)
 	if err != nil {
 		return requestresponse.APIResponseDTO(false, 500, nil, "Error al llamar a Lambda: "+err.Error())
 	}
-	fmt.Println("Raw Response:", rawResponse)
+
 	var lambdaResult LambdaResponse
 	if err := json.Unmarshal([]byte(rawResponse.Body), &lambdaResult); err != nil {
 		return requestresponse.APIResponseDTO(false, 500, nil, "Error al decodificar cuerpo de respuesta del antivirus: "+err.Error())
@@ -61,4 +56,16 @@ func VerificarPDFBase64(pdfBase64 string) requestresponse.APIResponse {
 			"statusCode": 200,
 		},
 	}, nil)
+}
+
+func construirUrlEscaneo() string {
+	baseURL := strings.TrimSpace(beego.AppConfig.String("EscanearArchivo"))
+
+	if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
+		baseURL = "https://" + baseURL
+	}
+
+	baseURL = strings.TrimRight(baseURL, "/")
+
+	return baseURL + "/verificar"
 }
