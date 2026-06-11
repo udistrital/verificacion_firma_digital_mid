@@ -7,7 +7,7 @@ workspace:
 
 steps:
 - name: build
-  image: golang:1.24.1
+  image: golang:1.25.5
   commands:
     - go get -t
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main
