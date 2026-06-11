@@ -6,16 +6,39 @@ workspace:
   path: src/github.com/${DRONE_REPO}
 
 steps:
-- name: build
-  image: golang:1.25.5
+- name: go_run_test
+  image: golang:1.25
   commands:
-    - go get -t
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main
+    - go vet ./...
+    - go fmt ./... && git diff --exit-code || (echo "Go fmt detected formatting issues! Please run 'go fmt' to format your code." && exit 1)
+    - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+    - golangci-lint run --out-format=checkstyle --timeout=5m > lint_report.xml || true
+    - cat lint_report.xml
+    # - go install github.com/axw/gocov/...@latest
+    # - go install github.com/AlekSi/gocov-xml@latest
+    # - gocov test ./... | gocov-xml > coverage.xml
+    # - cat coverage.xml
+    # - go install github.com/jstemmer/go-junit-report@latest
+    # - go test -v ./... | go-junit-report > test_report.xml
+    # - cat test_report.xml
   when:
     branch:
+      - feature/*
+      - develop
+      - hotfix/*
+    event:
+      - push
+
+- name: build
+  image: golang:1.25
+  commands:
+    - GOOS=linux GOARCH=amd64 go build -o main
+  when:
+    branch:
+      - feature/*
       - develop
       - release/*
-      - feature/*
+      - hotfix/*
       - master
     event:
       - push
@@ -44,11 +67,11 @@ steps:
     access_key:
       from_secret: AWS_ACCESS_KEY_ID
     create_repository: true
-    secret_key:
-      from_secret: AWS_SECRET_ACCESS_KEY
     region:
       from_secret: AWS_REGION
     repo: ${DRONE_REPO_NAME}
+    secret_key:
+      from_secret: AWS_SECRET_ACCESS_KEY
     tags:
       - ${DRONE_COMMIT:0:7}
       - release
@@ -63,11 +86,12 @@ steps:
   settings:
     access_key:
       from_secret: AWS_ACCESS_KEY_ID
-    secret_key:
-      from_secret: AWS_SECRET_ACCESS_KEY
+    create_repository: true
     region:
       from_secret: AWS_REGION
     repo: ${DRONE_REPO_NAME}
+    secret_key:
+      from_secret: AWS_SECRET_ACCESS_KEY
     tags:
       - ${DRONE_COMMIT:0:7}
       - latest
@@ -77,46 +101,34 @@ steps:
     event:
       - push
 
-- name: deploy_ecs_service_release
-  image: joshdvir/drone-ecs-deploy
-  settings:
-    cluster: test
-    service: ${DRONE_REPO_NAME}_test
-    aws_region: ${AWS_REGION}
-    aws_access_key_id: ${AWS_ACCESS_KEY_ID}
-    aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
-    image_tag: release
+- name: update_ecs_service
+  image: amazon/aws-cli:latest
   environment:
     AWS_ACCESS_KEY_ID:
       from_secret: AWS_ACCESS_KEY_ID
-    AWS_REGION:
-      from_secret: AWS_REGION
     AWS_SECRET_ACCESS_KEY:
       from_secret: AWS_SECRET_ACCESS_KEY
+    AWS_DEFAULT_REGION:
+      from_secret: AWS_REGION
+  commands:
+  - case ${DRONE_BRANCH} in
+    master)
+    SUFFIX=prod
+    CLUSTER=oas
+      ;;
+    *)
+    SUFFIX=test
+    CLUSTER=test
+      ;;
+    esac
+  - aws ecs update-service
+    --cluster $${CLUSTER}
+    --service $${DRONE_REPO_NAME}_$${SUFFIX}
+    --force-new-deployment
+    --query "service.deployments[0].id"
   when:
     branch:
       - release/*
-    event:
-      - push
-
-- name: deploy_ecs_service_prod
-  image: joshdvir/drone-ecs-deploy
-  settings:
-    cluster: oas
-    service: ${DRONE_REPO_NAME}_prod
-    aws_region: ${AWS_REGION}
-    aws_access_key_id: ${AWS_ACCESS_KEY_ID}
-    aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
-    image_tag: latest
-  environment:
-    AWS_ACCESS_KEY_ID:
-      from_secret: AWS_ACCESS_KEY_ID
-    AWS_REGION:
-      from_secret: AWS_REGION
-    AWS_SECRET_ACCESS_KEY:
-      from_secret: AWS_SECRET_ACCESS_KEY
-  when:
-    branch:
       - master
     event:
       - push
