@@ -2,7 +2,6 @@ package services
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/astaxie/beego"
 	"github.com/udistrital/utils_oas/request"
@@ -28,7 +27,7 @@ func VerificarPDFBase64(pdfBase64 string) requestresponse.APIResponse {
 	payload := map[string]string{"pdf_base64": pdfBase64}
 	var rawResponse LambdaRawResponse
 
-	urlEscanear := construirUrlEscaneo()
+	urlEscanear := beego.AppConfig.String("EscanearArchivo") + "verificar"
 
 	err := request.SendJson(
 		urlEscanear,
@@ -56,16 +55,4 @@ func VerificarPDFBase64(pdfBase64 string) requestresponse.APIResponse {
 			"statusCode": 200,
 		},
 	}, nil)
-}
-
-func construirUrlEscaneo() string {
-	baseURL := strings.TrimSpace(beego.AppConfig.String("EscanearArchivo"))
-
-	if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
-		baseURL = "https://" + baseURL
-	}
-
-	baseURL = strings.TrimRight(baseURL, "/")
-
-	return baseURL + "/verificar"
 }

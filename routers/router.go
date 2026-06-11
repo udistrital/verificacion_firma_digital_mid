@@ -4,8 +4,8 @@
 package routers
 
 import (
-	"github.com/udistrital/verificacion_firma_digital_mid/controllers"
 	"github.com/udistrital/utils_oas/errorhandler"
+	"github.com/udistrital/verificacion_firma_digital_mid/controllers"
 
 	"github.com/astaxie/beego"
 )
