@@ -2,7 +2,7 @@ package services
 
 import (
 	"encoding/json"
-	"fmt"
+
 	"github.com/astaxie/beego"
 	"github.com/udistrital/utils_oas/request"
 	"github.com/udistrital/utils_oas/requestresponse"
@@ -27,24 +27,18 @@ func VerificarPDFBase64(pdfBase64 string) requestresponse.APIResponse {
 	payload := map[string]string{"pdf_base64": pdfBase64}
 	var rawResponse LambdaRawResponse
 
-	//DOCKER CON CLAMDSCAN
-	/*err := request.SendJson(
-		"http://localhost:8080/v1/verificar",
-		"POST", &rawResponse, payload,
-	)*/
-	/*err := request.SendJson(
-		"https://pruebasarchivo.portaloas.udistrital.edu.co/v1/verificar",
-		"POST", &rawResponse, payload,
-	)*/
-	urlEscanear := "https://" + beego.AppConfig.String("EscanearArchivo") + "verificar"
+	urlEscanear := beego.AppConfig.String("EscanearArchivo") + "verificar"
+
 	err := request.SendJson(
 		urlEscanear,
-		"POST", &rawResponse, payload,
+		"POST",
+		&rawResponse,
+		payload,
 	)
 	if err != nil {
 		return requestresponse.APIResponseDTO(false, 500, nil, "Error al llamar a Lambda: "+err.Error())
 	}
-	fmt.Println("Raw Response:", rawResponse)
+
 	var lambdaResult LambdaResponse
 	if err := json.Unmarshal([]byte(rawResponse.Body), &lambdaResult); err != nil {
 		return requestresponse.APIResponseDTO(false, 500, nil, "Error al decodificar cuerpo de respuesta del antivirus: "+err.Error())

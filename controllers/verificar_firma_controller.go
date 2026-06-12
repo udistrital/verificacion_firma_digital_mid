@@ -1,13 +1,13 @@
 package controllers
 
 import (
-	"github.com/astaxie/beego"
 	"encoding/json"
-	"github.com/udistrital/verificacion_firma_digital_mid/services"
-	"github.com/udistrital/verificacion_firma_digital_mid/models"
+
+	"github.com/astaxie/beego"
 	"github.com/udistrital/utils_oas/errorhandler"
 	"github.com/udistrital/utils_oas/requestresponse"
-	"fmt"
+	"github.com/udistrital/verificacion_firma_digital_mid/models"
+	"github.com/udistrital/verificacion_firma_digital_mid/services"
 )
 
 // VerificarFirmaController operations for VerficarFirma
@@ -64,7 +64,6 @@ func (c *VerificarFirmaController) PostVerificarFirma() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("Resultado de ClamAV:", resultadoClamAV)
 
 	// Obtener resultado del antivirus y formatearlo
 	var virusResult map[string]interface{}
@@ -86,7 +85,6 @@ func (c *VerificarFirmaController) PostVerificarFirma() {
 			"statusCode": 500,
 		}
 	}
-	fmt.Println("Resultado de virusResult:", virusResult)
 
 	token := c.Ctx.Input.Header("Authorization")
 	// Verificar firma electrónica
@@ -123,7 +121,7 @@ func (c *VerificarFirmaController) PostVerificarFirma() {
 
 	// Estructura final de respuesta
 	dataFinal := map[string]interface{}{
-		"Virus":       virusResult,
+		"Virus":        virusResult,
 		"Verificacion": firmaResult,
 	}
 

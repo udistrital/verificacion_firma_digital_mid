@@ -1,8 +1,10 @@
 package main
 
 import (
-	_ "github.com/udistrital/verificacion_firma_digital_mid/routers"
 	apistatus "github.com/udistrital/utils_oas/apiStatusLib"
+	"github.com/udistrital/utils_oas/customerror"
+	"github.com/udistrital/utils_oas/security"
+	_ "github.com/udistrital/verificacion_firma_digital_mid/routers"
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/plugins/cors"
@@ -11,29 +13,31 @@ import (
 )
 
 func main() {
-	AllowedOrigins := []string{"*.udistrital.edu.co"}
-	if beego.BConfig.RunMode == "dev" {
-		AllowedOrigins = []string{"*"}
+	allowedOrigins := []string{"*.udistrital.edu.co"}
+	if beego.BConfig.RunMode == beego.DEV {
+		allowedOrigins = []string{"*"}
 		beego.BConfig.WebConfig.DirectoryIndex = true
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 	}
 
 	beego.InsertFilter("*", beego.BeforeRouter, cors.Allow(&cors.Options{
-		//AllowOrigins: []string{"*"},
-		AllowOrigins: AllowedOrigins,
-		AllowMethods: []string{"GET", "POST"},
-		AllowHeaders: []string{"Origin", "x-requested-with",
-			"content-type",
-			"accept",
-			"origin",
-			"authorization",
-			"x-csrftoken"},
+		AllowOrigins: allowedOrigins,
+		AllowMethods: []string{"GET", "OPTIONS", "POST"},
+		AllowHeaders: []string{
+			"Accept",
+			"Authorization",
+			"Content-Type",
+			"User-Agent",
+			"X-Amzn-Trace-Id"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
 
-	xray.InitXRay()
 	apistatus.Init()
 	auditoria.InitMiddleware()
+	security.SetSecurityHeaders()
+	xray.Init()
+
+	beego.ErrorController(&customerror.CustomErrorController{})
 	beego.Run()
 }
